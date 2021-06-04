@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventoryapp-ms-deploy
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventoryapp-ms
+  template:
+    metadata:
+      labels:
+        app: inventoryapp-ms
+    spec:
+      nodeSelector:
+        "beta.kubernetes.io/os": linux
+      containers:
+      - name: inventoryapp-ms
+        image: inventoryappregistry.azurecr.io/inventoryapp:latest
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 250m
+            memory: 256Mi
+        ports:
+        - containerPort: 80
+        env:                  # Environment variables supplied to the Pod
+        - name: SPRING_DATASOURCE_USERNAME # Name of the environment variable
+          valueFrom:          # Get the value of environment variable from kubernetes secrets
+            secretKeyRef:
+              name: mysql-user-pass
+              key: username
+        - name: SPRING_DATASOURCE_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: mysql-user-pass
+              key: password
+        - name: SPRING_DATASOURCE_URL
+          valueFrom:
+            secretKeyRef:
+              name: mysql-db-url
+              key: url
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventoryapp-ms-svc
+  namespace: app
+spec:
+  type: LoadBalancer            #ClusterIP # LoadBalancer # NodePort # 
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8085
+  selector:
+    app: inventoryapp-ms
